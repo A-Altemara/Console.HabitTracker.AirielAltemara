@@ -1,61 +1,18 @@
-﻿using System.Data;
-using System.Data.SQLite;
+﻿using System.Data.SQLite;
 using System.Text.RegularExpressions;
 
 namespace ConsoleHabitTracker;
 
 public static class Program
 {
-    private static readonly Random Random = new Random();
     private static readonly string[] DateFormats = { "MM-dd-yyyy", "dd-MM-yyyy" };
-
 
     static void Main()
     {
         var continueProgram = true;
 
         string connectionString = "Data Source = habits.db; Version=3;";
-
-        using var connection = new SQLiteConnection(connectionString);
-
-        connection.Open();
-        if (connection.State != ConnectionState.Open)
-        {
-            Console.WriteLine("Failed to connect to the database.");
-            return;
-        }
-
-        Console.WriteLine("Connected to the database.");
-
-        string checkTableQuery = "SELECT name FROM sqlite_master WHERE type='table' AND name='habitsTable';";
-        var tableExists = false;
-
-        using (SQLiteCommand command = new (checkTableQuery, connection))
-        {
-            using (SQLiteDataReader reader = command.ExecuteReader())
-            {
-                tableExists = reader.HasRows;
-            }
-        }
-
-        // if table doesn't exit Create a table
-
-        if (!tableExists)
-        {
-            string createTableQuery = "CREATE TABLE habitsTable " +
-                                      "(Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                                      "Date TEXT NOT NULL , " +
-                                      "HabitName TEXT NOT NULL, " +
-                                      "Quantity INTEGER, " +
-                                      "Units TEXT);";
-
-            using (SQLiteCommand command = new SQLiteCommand(createTableQuery, connection))
-            {
-                command.ExecuteNonQuery();
-            }
-
-            CreateAndPopulateData(connection);
-        }
+        var habitDb = new HabitdB(connectionString);
 
         while (continueProgram)
         {
@@ -70,23 +27,23 @@ public static class Program
                     break;
                 case '1':
                     Console.WriteLine("\n\nView All Records");
-                    ViewRecords(connection);
+                    ViewRecords(habitDb);
                     Console.WriteLine("Press enter to continue");
                     Console.ReadLine();
                     break;
                 case '2':
                     Console.WriteLine("\n\nAdd a Record");
-                    AddNewHabit(connection);
+                    AddNewHabit(habitDb);
                     break;
                 case '3':
                     Console.WriteLine("\n\nDelete a Record");
-                    ViewRecords(connection);
-                    DeleteEntry(connection);
+                    ViewRecords(habitDb);
+                    DeleteEntry(habitDb);
                     break;
                 case '4':
                     Console.WriteLine("\n\nEdit a Record");
-                    ViewRecords(connection);
-                    UpdateEntry(connection);
+                    ViewRecords(habitDb);
+                    UpdateEntry(habitDb);
                     break;
                 default:
                     Console.WriteLine("\n\nInvalid Selection press enter to try again");
@@ -95,81 +52,17 @@ public static class Program
             }
         }
 
-        connection.Close();
-    }
-    
-    private static void CreateAndPopulateData(SQLiteConnection connection)
-    {
-        List<Habit> prepopulatedData = new();
-        int counter = 100;
-        while (counter > 0)
-        {
-            DateOnly randomDate = GenerateRandomDate(new DateOnly(2020, 1, 1), new DateOnly(2024, 7, 31));
-            string randomActivity = GenerateRandomActivity();
-            int randomDuration = Random.Next(1, 60);
-            string randomUnits = GenerateRandomUnits();
-
-            // Create an Habit object and add it to the list
-            var entry = new Habit
-            {
-                Date = randomDate,
-                HabitName = randomActivity,
-                Quantity = randomDuration,
-                Units = randomUnits
-            };
-            prepopulatedData.Add(entry);
-            counter--;
-        }
-        
-        foreach (var entry in prepopulatedData)
-        {
-            string insertQuery = "INSERT INTO habitsTable (Date, HabitName, Quantity, Units) " +
-                                 "VALUES (@date, @habitName, @quantity, @units);";
-
-            using SQLiteCommand command = new SQLiteCommand(insertQuery, connection);
-            command.Parameters.AddWithValue("@date", entry.Date.ToString("MM-dd-yyyy"));
-            command.Parameters.AddWithValue("@habitName", entry.HabitName);
-            command.Parameters.AddWithValue("@quantity", entry.Quantity);
-            command.Parameters.AddWithValue("@units", entry.Units);
-
-            command.ExecuteNonQuery();
-        }
+        habitDb.CloseConnection();
     }
 
-    static string GenerateRandomActivity()
-    {
-        string[] possibleActivities = ["swimming", "running", "walking", "cycling", "working", "cooking", "coding", "reading"];
-        int chosenEntry = Random.Next(0, 8);
-        return possibleActivities[chosenEntry];
-    }
-    
-    static string GenerateRandomUnits()
-    {
-        string[] possibleUnits = ["minutes", "hours", "miles", "kilometers"];
-        int chosenEntry = Random.Next(0, 4);
-        return possibleUnits[chosenEntry];
-    }
-    
-    static DateOnly GenerateRandomDate(DateOnly startDate, DateOnly endDate)
-    {
-        // Calculate the total number of days between the start and end dates
-        int totalDays = (endDate.ToDateTime(TimeOnly.MinValue) - startDate.ToDateTime(TimeOnly.MinValue)).Days;
-
-        // Generate a random number of days to add to the start date
-        int randomDays = Random.Next(0, totalDays + 1);
-
-        // Return the new random date
-        return startDate.AddDays(randomDays);
-    }
-
-    private static void UpdateEntry(SQLiteConnection connection)
+    private static void UpdateEntry(HabitdB habitDb)
     {
         Console.WriteLine("Enter the record ID would you like to edit, or E to exit");
         var idToEdit = Console.ReadLine()?.ToLower();
         var sanitizedIdToEdit = SanitizeNullOrWhiteSpace(idToEdit);
         if (IsExit(sanitizedIdToEdit)) return;
 
-        while (!CheckEntryExists(connection, sanitizedIdToEdit))
+        while (!habitDb.CheckEntryExists(sanitizedIdToEdit))
         {
             Console.WriteLine("invalid entry please try again or press E to exit");
             idToEdit = Console.ReadLine()?.ToLower();
@@ -184,7 +77,7 @@ public static class Program
         Console.WriteLine("\tEdit the Habit Units select 3 and press enter");
         var selectColumnToEdit = Console.ReadLine()?.ToLower();
 
-        while (string.IsNullOrWhiteSpace(selectColumnToEdit) || 
+        while (string.IsNullOrWhiteSpace(selectColumnToEdit) ||
                !Regex.IsMatch(selectColumnToEdit, "^[eE0123]$"))
         {
             if (selectColumnToEdit?.ToLower() == "e")
@@ -198,6 +91,7 @@ public static class Program
             selectColumnToEdit = Console.ReadLine()?.ToLower();
         }
 
+        var habit = habitDb.GetHabit(sanitizedIdToEdit);
         switch (selectColumnToEdit)
         {
             case "0":
@@ -207,26 +101,7 @@ public static class Program
                 var sanitizedNewDate = SanitizeNullOrWhiteSpace(newHabitDate);
                 if (IsExit(sanitizedNewDate)) return;
                 var newDate = SanitizeDate(sanitizedNewDate).ToString(DateFormats[0]);
-                string updateQuery = "UPDATE habitsTable SET Date = @date WHERE Id = @id;";
-
-                // Create a command object and pass the query and connection
-                using (SQLiteCommand command = new SQLiteCommand(updateQuery, connection))
-                {
-                    // Add parameters to avoid SQL injection
-                    command.Parameters.AddWithValue("@date", $"{newDate}");
-                    command.Parameters.AddWithValue("@id", idToEdit);
-
-                    try
-                    {
-                        command.ExecuteNonQuery();
-                        Console.WriteLine("Database updated successfully.");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"An error occurred: {ex.Message}");
-                    }
-                }
-
+                habit.Date = DateOnly.Parse(newDate);
                 break;
             case "1":
                 Console.WriteLine("\nEditing the Habit Name");
@@ -234,52 +109,15 @@ public static class Program
                 var newHabitName = Console.ReadLine();
                 var sanitizedNewHabit = SanitizeNullOrWhiteSpace(newHabitName);
                 if (IsExit(sanitizedNewHabit)) return;
-                // SQL UPDATE command to update the habit with the given Id
-                updateQuery = "UPDATE habitsTable SET HabitName = @habitName WHERE Id = @id;";
-
-                // Create a command object and pass the query and connection
-                using (SQLiteCommand command = new SQLiteCommand(updateQuery, connection))
-                {
-                    // Add parameters to avoid SQL injection
-                    command.Parameters.AddWithValue("@habitName", $"{sanitizedNewHabit}");
-                    command.Parameters.AddWithValue("@id", idToEdit);
-
-                    try
-                    {
-                        command.ExecuteNonQuery();
-                        Console.WriteLine("Database updated successfully.");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"An error occurred: {ex.Message}");
-                    }
-                }
-
+                habit.HabitName = sanitizedNewHabit;
                 break;
             case "2":
                 Console.WriteLine("\nEditing the Habit Quantity");
                 Console.WriteLine("Enter the new Quantity");
                 var newQuantity = Console.ReadLine();
+                if (IsExit(newQuantity ?? "")) return;
                 var sanitizedQuantity = SanitizeQuantity(newQuantity);
-                updateQuery = "UPDATE habitsTable SET Quantity = @quantity WHERE Id = @id;";
-
-                using (SQLiteCommand command = new SQLiteCommand(updateQuery, connection))
-                {
-                    command.Parameters.AddWithValue("@quantity", $"{sanitizedQuantity}");
-                    command.Parameters.AddWithValue("@id", idToEdit);
-
-                    try
-                    {
-                        command.ExecuteNonQuery();
-                        Console.WriteLine("Database updated successfully.");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"An error occurred: {ex.Message}");
-                    }
-                }
-
-                Console.WriteLine("quantity updated");
+                habit.Quantity = sanitizedQuantity;
                 break;
             case "3":
                 Console.WriteLine("\nEditing the Habit Units");
@@ -287,39 +125,23 @@ public static class Program
                 var newUnits = Console.ReadLine();
                 var sanitizedNewUnits = SanitizeNullOrWhiteSpace(newUnits);
                 if (IsExit(sanitizedNewUnits)) return;
-                updateQuery = "UPDATE habitsTable SET Units = @units WHERE Id = @id;";
-
-                using (SQLiteCommand command = new SQLiteCommand(updateQuery, connection))
-                {
-                    command.Parameters.AddWithValue("@units", $"{sanitizedNewUnits}");
-                    command.Parameters.AddWithValue("@id", idToEdit);
-
-                    try
-                    {
-                        command.ExecuteNonQuery();
-                        Console.WriteLine("Database updated successfully.");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"An error occurred: {ex.Message}");
-                    }
-                }
-
+                habit.Units = sanitizedNewUnits;
                 break;
         }
 
+        habitDb.UpdateHabit(habit);
         Console.WriteLine("Record updated, press enter to continue");
         Console.ReadLine();
     }
 
-    private static void DeleteEntry(SQLiteConnection connection)
+    private static void DeleteEntry(HabitdB habitDb)
     {
         Console.WriteLine("Enter the record ID would you like to delete, or E to exit");
-        var entry = Console.ReadLine()?.ToLower();
+        var id = Console.ReadLine()?.ToLower();
 
-        while (string.IsNullOrWhiteSpace(entry) || !CheckEntryExists(connection, entry) || entry == "e")
+        while (string.IsNullOrWhiteSpace(id) || !habitDb.CheckEntryExists(id) || id == "e")
         {
-            if (entry == "e")
+            if (id == "e")
             {
                 Console.WriteLine("Exiting Delete Option, press enter to continue");
                 Console.ReadLine();
@@ -327,68 +149,35 @@ public static class Program
             }
 
             Console.WriteLine("invalid entry please try again or press E to exit");
-            entry = Console.ReadLine()?.ToLower();
+            id = Console.ReadLine()?.ToLower();
         }
 
-        Console.WriteLine($"Deleting record ID {entry}");
-        string deleteRecord = $"DELETE FROM habitsTable WHERE Id == {entry};";
-
-        using (SQLiteCommand command = new SQLiteCommand(deleteRecord, connection))
+        if (habitDb.DeleteHabit(id))
         {
-            command.ExecuteNonQuery();
+            Console.WriteLine("Record deleted successfully, press any key to continue");
         }
+        else
+        {
+            Console.WriteLine("Failed to delete record, press any key to continue");
+        }
+
+        Console.ReadKey();
     }
 
-    public static bool CheckEntryExists(SQLiteConnection connection, string id)
+    private static void ViewRecords(HabitdB habitDb)
     {
-        if (!int.TryParse(id, out _))
+        var habits = habitDb.GetAllRecords();
+        foreach (var habit in habits)
         {
-            return false;
-        }
-
-        string query = "SELECT COUNT(*) FROM habitsTable WHERE Id = @id;";
-
-        using (SQLiteCommand command = new SQLiteCommand(query, connection))
-        {
-            command.Parameters.AddWithValue("@id", id);
-
-            // ExecuteScalar returns the first column of the first row in the result set
-            int count = Convert.ToInt32(command.ExecuteScalar());
-
-            return count > 0;
-        }
-
-    }
-
-    private static void ViewRecords(SQLiteConnection connection)
-    {
-        string selectDataQuery = "SELECT * FROM habitsTable;";
-        using (SQLiteCommand command = new SQLiteCommand(selectDataQuery, connection))
-        {
-            using (SQLiteDataReader reader = command.ExecuteReader())
-            {
-                while (reader.Read())
-                {
-                    Console.WriteLine($"Id: {reader["Id"],-4} " +
-                                      $"Date: {reader["Date"],-20} " +
-                                      $"HabitName: {reader["HabitName"],-20} " +
-                                      $"Quantity: {reader["Quantity"],-10} " +
-                                      $"Units: {reader["Units"],-10}");
-                }
-            }
+            Console.WriteLine($"Id: {habit.Id,-4} " +
+                              $"Date: {habit.Date,-20} " +
+                              $"HabitName: {habit.HabitName,-20} " +
+                              $"Quantity: {habit.Quantity,-10} " +
+                              $"Units: {habit.Units,-10}");
         }
     }
 
-    public class Habit
-    {
-        public int Id { get; set; }
-        public DateOnly Date { get; set; }
-        public string? HabitName { get; set; }
-        public int Quantity { get; set; }
-        public string? Units { get; set; }
-    }
-
-    private static void AddNewHabit(SQLiteConnection connection)
+    private static void AddNewHabit(HabitdB habitDb)
     {
         Console.WriteLine("Enter Date completed mm-dd-yyyy, or type 'E' to exit");
         string? dateEntry = Console.ReadLine();
@@ -410,17 +199,19 @@ public static class Program
         string units = SanitizeNullOrWhiteSpace(unitsEntry);
         if (IsExit(units)) return;
 
-        string insertDataQuery = $"INSERT INTO habitsTable (Date, HabitName, Quantity, Units) VALUES " +
-                                 $"('{dateValue}', '{habitName}', {quantity}, '{units}');";
-        using (SQLiteCommand command = new SQLiteCommand(insertDataQuery, connection))
+        var newHabit = new Habit
         {
-            command.ExecuteNonQuery();
-        }
+            Date = DateOnly.Parse(dateValue),
+            HabitName = habitName,
+            Quantity = quantity,
+            Units = units
+        };
 
+        habitDb.AddHabit(newHabit);
         Console.WriteLine("New entry added, press enter to continue");
         Console.ReadLine();
     }
-    
+
     private static DateOnly SanitizeDate(string? dateEntry)
     {
         while (true)
