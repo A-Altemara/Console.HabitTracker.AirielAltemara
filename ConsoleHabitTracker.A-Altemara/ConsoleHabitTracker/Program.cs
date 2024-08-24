@@ -16,7 +16,7 @@ public static class Program
 
         while (continueProgram)
         {
-            DisplayMenu();
+            Menu.DisplayMainMenu();
             var selection = Console.ReadKey().KeyChar;
 
             switch (selection)
@@ -167,14 +167,7 @@ public static class Program
     private static void ViewRecords(HabitdB habitDb)
     {
         var habits = habitDb.GetAllRecords();
-        foreach (var habit in habits)
-        {
-            Console.WriteLine($"Id: {habit.Id,-4} " +
-                              $"Date: {habit.Date,-20} " +
-                              $"HabitName: {habit.HabitName,-20} " +
-                              $"Quantity: {habit.Quantity,-10} " +
-                              $"Units: {habit.Units,-10}");
-        }
+        Menu.DisplayAllRecords(habits);
     }
 
     private static void AddNewHabit(HabitdB habitDb)
@@ -276,8 +269,11 @@ public static class Program
 
         return entryName;
     }
+}
 
-    private static void DisplayMenu()
+public static class Menu
+{
+    public static void DisplayMainMenu()
     {
         Console.Clear();
         Console.WriteLine("What do you want to do?\n");
@@ -286,5 +282,17 @@ public static class Program
         Console.WriteLine("Type 2 to Add a record");
         Console.WriteLine("Type 3 to Delete a record");
         Console.WriteLine("Type 4 to Edit a record");
+    }
+
+    public static void DisplayAllRecords(IEnumerable<Habit> habits)
+    {
+        foreach (var habit in habits)
+        {
+            Console.WriteLine($"Id: {habit.Id,-4} " +
+                              $"Date: {habit.Date,-20} " +
+                              $"HabitName: {habit.HabitName,-20} " +
+                              $"Quantity: {habit.Quantity,-10} " +
+                              $"Units: {habit.Units,-10}");
+        }
     }
 }
