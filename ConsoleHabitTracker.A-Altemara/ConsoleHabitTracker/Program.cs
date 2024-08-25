@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using System.Data.SQLite;
 using System.Text.RegularExpressions;
 
@@ -59,7 +59,7 @@ public static class Program
 
         while (continueProgram)
         {
-            Menu.DisplayMainMenu();
+            DisplayMenu();
             var selection = Console.ReadKey().KeyChar;
 
             switch (selection)
@@ -333,18 +333,6 @@ public static class Program
         Console.WriteLine($"Deleting record ID {entry}");
         string deleteRecord = $"DELETE FROM habitsTable WHERE Id == {entry};";
 
-<<<<<<< HEAD
-        Console.ReadKey();
-    }
-
-    private static void ViewRecords(HabitdB habitDb)
-    {
-        var habits = habitDb.GetAllRecords();
-        Menu.DisplayAllRecords(habits);
-    }
-
-    private static void AddNewHabit(HabitdB habitDb)
-=======
         using (SQLiteCommand command = new SQLiteCommand(deleteRecord, connection))
         {
             command.ExecuteNonQuery();
@@ -401,7 +389,6 @@ public static class Program
     }
 
     private static void AddNewHabit(SQLiteConnection connection)
->>>>>>> parent of 7a9122f (Moved Habit to it's own class, and moved DB access to it's own class)
     {
         Console.WriteLine("Enter Date completed mm-dd-yyyy, or type 'E' to exit");
         string? dateEntry = Console.ReadLine();
@@ -498,11 +485,8 @@ public static class Program
 
         return entryName;
     }
-}
 
-public static class Menu
-{
-    public static void DisplayMainMenu()
+    private static void DisplayMenu()
     {
         Console.Clear();
         Console.WriteLine("What do you want to do?\n");
@@ -511,22 +495,5 @@ public static class Menu
         Console.WriteLine("Type 2 to Add a record");
         Console.WriteLine("Type 3 to Delete a record");
         Console.WriteLine("Type 4 to Edit a record");
-<<<<<<< HEAD
-    }
-
-    public static void DisplayAllRecords(IEnumerable<Habit> habits)
-    {
-        foreach (var habit in habits)
-        {
-            Console.WriteLine($"Id: {habit.Id,-4} " +
-                              $"Date: {habit.Date,-20} " +
-                              $"HabitName: {habit.HabitName,-20} " +
-                              $"Quantity: {habit.Quantity,-10} " +
-                              $"Units: {habit.Units,-10}");
-        }
     }
 }
-=======
-    }
-}
->>>>>>> parent of 7a9122f (Moved Habit to it's own class, and moved DB access to it's own class)
