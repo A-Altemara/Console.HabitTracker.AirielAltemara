@@ -7,4 +7,9 @@ public class Habit
     public string? HabitName { get; set; }
     public int Quantity { get; set; }
     public string? Units { get; set; }
+
+    public override string ToString()
+    {
+        return Id.ToString();
+    }
 }

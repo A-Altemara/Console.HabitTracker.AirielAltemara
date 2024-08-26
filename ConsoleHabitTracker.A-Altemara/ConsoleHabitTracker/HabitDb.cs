@@ -3,12 +3,12 @@ using System.Data.SQLite;
 
 namespace ConsoleHabitTracker;
 
-public class HabitdB
+public class HabitDb
 {
-    private readonly Random Random = new();
+    private readonly Random _random = new();
     private readonly SQLiteConnection _connection;
 
-    public HabitdB(string connectionString)
+    public HabitDb(string connectionString)
     {
         _connection = new SQLiteConnection(connectionString);
 
@@ -22,7 +22,7 @@ public class HabitdB
         Console.WriteLine("Connected to the database.");
 
         string checkTableQuery = "SELECT name FROM sqlite_master WHERE type='table' AND name='habitsTable';";
-        var tableExists = false;
+        bool tableExists;
 
         using (SQLiteCommand command = new(checkTableQuery, _connection))
         {
@@ -46,7 +46,7 @@ public class HabitdB
                 command.ExecuteNonQuery();
             }
 
-            CreateAndPopulateData();
+            GenerateAndPopulateData();
         }
     }
 
@@ -55,7 +55,7 @@ public class HabitdB
         _connection.Close();
     }
 
-    public void CreateAndPopulateData()
+    private void GenerateAndPopulateData()
     {
         List<Habit> prepopulatedData = new();
         int counter = 100;
@@ -63,7 +63,7 @@ public class HabitdB
         {
             DateOnly randomDate = GenerateRandomDate(new DateOnly(2020, 1, 1), new DateOnly(2024, 7, 31));
             string randomActivity = GenerateRandomActivity();
-            int randomDuration = Random.Next(1, 60);
+            int randomDuration = _random.Next(1, 60);
             string randomUnits = GenerateRandomUnits();
 
             // Create an Habit object and add it to the list
@@ -93,7 +93,7 @@ public class HabitdB
         }
     }
 
-    public IEnumerable<Habit> GetAllRecords()
+    public List<Habit> GetAllRecords()
     {
         var habits = new List<Habit>();
         string selectDataQuery = "SELECT * FROM habitsTable;";
@@ -105,7 +105,7 @@ public class HabitdB
                 var habit = new Habit
                 {
                     Id = reader.GetInt32(0),
-                    Date = DateOnly.Parse(reader.GetString(1)),
+                    Date = DateOnly.ParseExact(reader.GetString(1), "MM-dd-yyyy"),
                     HabitName = reader.GetString(2),
                     Quantity = reader.GetInt32(3),
                     Units = reader.GetString(4)
@@ -149,44 +149,6 @@ public class HabitdB
         }
     }
 
-    public bool CheckEntryExists(string id)
-    {
-        if (!int.TryParse(id, out _))
-        {
-            return false;
-        }
-
-        string query = "SELECT COUNT(*) FROM habitsTable WHERE Id = @id;";
-
-        using SQLiteCommand command = new(query, _connection);
-        command.Parameters.AddWithValue("@id", id);
-
-        // ExecuteScalar returns the first column of the first row in the result set
-        int count = Convert.ToInt32(command.ExecuteScalar());
-
-        return count > 0;
-    }
-
-    public Habit GetHabit(string id)
-    {
-        string query = "SELECT * FROM habitsTable WHERE Id = @id;";
-
-        using SQLiteCommand command = new(query, _connection);
-        command.Parameters.AddWithValue("@id", id);
-
-        using SQLiteDataReader reader = command.ExecuteReader();
-        reader.Read();
-
-        return new Habit
-        {
-            Id = reader.GetInt32(0),
-            Date = DateOnly.Parse(reader.GetString(1)),
-            HabitName = reader.GetString(2),
-            Quantity = reader.GetInt32(3),
-            Units = reader.GetString(4)
-        };
-    }
-
     public bool UpdateHabit(Habit habit)
     {
         string updateQuery = "UPDATE habitsTable SET Date = @date, HabitName = @habitName, Quantity = @quantity, " +
@@ -213,14 +175,14 @@ public class HabitdB
     private string GenerateRandomActivity()
     {
         string[] possibleActivities = ["swimming", "running", "walking", "cycling", "working", "cooking", "coding", "reading"];
-        int chosenEntry = Random.Next(0, 8);
+        int chosenEntry = _random.Next(0, 8);
         return possibleActivities[chosenEntry];
     }
-
+    
     private string GenerateRandomUnits()
     {
         string[] possibleUnits = ["minutes", "hours", "miles", "kilometers"];
-        int chosenEntry = Random.Next(0, 4);
+        int chosenEntry = _random.Next(0, 4);
         return possibleUnits[chosenEntry];
     }
 
@@ -230,7 +192,7 @@ public class HabitdB
         int totalDays = (endDate.ToDateTime(TimeOnly.MinValue) - startDate.ToDateTime(TimeOnly.MinValue)).Days;
 
         // Generate a random number of days to add to the start date
-        int randomDays = Random.Next(0, totalDays + 1);
+        int randomDays = _random.Next(0, totalDays + 1);
 
         // Return the new random date
         return startDate.AddDays(randomDays);
