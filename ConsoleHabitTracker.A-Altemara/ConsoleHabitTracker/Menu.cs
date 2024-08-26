@@ -2,10 +2,19 @@ using System.Text.RegularExpressions;
 
 namespace ConsoleHabitTracker;
 
+/// <summary>
+/// Provides methods for displaying menus and handling input in a console-based habit tracking application.
+/// </summary>
 public static class Menu
 {
+    /// <summary>
+    /// Supported date formats for habit entries.
+    /// </summary>
     private static readonly string[] DateFormats = { "MM-dd-yyyy", "dd-MM-yyyy" };
 
+    /// <summary>
+    /// Displays the main menu options in the console.
+    /// </summary>
     public static void DisplayMainMenu()
     {
         Console.Clear();
@@ -17,6 +26,9 @@ public static class Menu
         Console.WriteLine("Type 4 to Edit a record");
     }
 
+    /// <summary>
+    /// Displays the edit menu options in the console.
+    /// </summary>
     private static void DisplayEditMenu()
     {
         Console.Clear();
@@ -27,6 +39,10 @@ public static class Menu
         Console.WriteLine("\tEdit the Habit Units select 3 and press enter");
     }
 
+    /// <summary>
+    /// Displays all habit records in the console.
+    /// </summary>
+    /// <param name="habits">A collection of habit records to display.</param>
     public static void DisplayAllRecords(IEnumerable<Habit> habits)
     {
         foreach (var habit in habits)
@@ -39,8 +55,10 @@ public static class Menu
         }
     }
 
-    
-
+    /// <summary>
+    /// Prompts the user to add a new habit record and returns the created habit.
+    /// </summary>
+    /// <returns>A new <see cref="Habit"/> object if the user completes the input, otherwise null if the user exits.</returns>
     public static Habit? AddNewHabit()
     {
         Console.WriteLine("Enter Date completed mm-dd-yyyy, or type 'E' to exit");
@@ -72,9 +90,13 @@ public static class Menu
         };
 
         return newHabit;
-        
     }
 
+    /// <summary>
+    /// Prompts the user to enter a valid habit ID from the provided collection of habits.
+    /// </summary>
+    /// <param name="habits">A collection of habit records to validate against.</param>
+    /// <returns>The valid habit ID entered by the user, or null if the user exits.</returns>
     public static string? GetValidHabitId(IEnumerable<Habit> habits)
     {
         var habitIdHash = habits.Select(h => h.Id.ToString()).ToHashSet();
@@ -90,13 +112,18 @@ public static class Menu
                 return null;
             }
 
-            Console.WriteLine("invalid entry please try again or press E to exit");
+            Console.WriteLine("Invalid entry, please try again or press E to exit");
             id = Console.ReadLine()?.ToLower();
         }
 
         return id;
     }
-    
+
+    /// <summary>
+    /// Prompts the user to update a habit entry.
+    /// </summary>
+    /// <param name="habit">The habit to update.</param>
+    /// <returns>The updated <see cref="Habit"/> object, or null if the user exits.</returns>
     public static Habit? UpdateEntry(Habit habit)
     {
         Menu.DisplayEditMenu();
@@ -104,10 +131,10 @@ public static class Menu
         while (string.IsNullOrWhiteSpace(selectColumnToEdit) ||
                !Regex.IsMatch(selectColumnToEdit, "^[eE0123]$"))
         {
-            Console.WriteLine("invalid entry please try again or press E to exit");
+            Console.WriteLine("Invalid entry, please try again or press E to exit");
             selectColumnToEdit = Console.ReadLine()?.ToLower();
         }
-        
+
         if (selectColumnToEdit.ToLower() == "e")
         {
             Console.WriteLine("Exiting, press enter to continue");
@@ -155,6 +182,11 @@ public static class Menu
         return habit;
     }
 
+    /// <summary>
+    /// Sanitizes the quantity input, ensuring it's a positive integer.
+    /// </summary>
+    /// <param name="entry">The quantity input as a string.</param>
+    /// <returns>A sanitized integer representing the quantity.</returns>
     private static int SanitizeQuantity(string? entry)
     {
         while (true)
@@ -164,18 +196,22 @@ public static class Menu
                 return validQuantity;
             }
 
-            Console.WriteLine("Invalid Entry please enter a numerical quantity");
+            Console.WriteLine("Invalid entry, please enter a numerical quantity");
             entry = Console.ReadLine();
         }
     }
 
+    /// <summary>
+    /// Sanitizes the date input, ensuring it's in a valid format.
+    /// </summary>
+    /// <param name="dateEntry">The date input as a string.</param>
+    /// <returns>A sanitized <see cref="DateOnly"/> object representing the date.</returns>
     private static DateOnly SanitizeDate(string? dateEntry)
     {
         while (true)
         {
             try
             {
-                // Try to parse the date using the specified formats
                 if (DateOnly.TryParseExact(dateEntry, DateFormats, null, System.Globalization.DateTimeStyles.None,
                         out DateOnly dateValue))
                 {
@@ -198,17 +234,27 @@ public static class Menu
         }
     }
 
+    /// <summary>
+    /// Ensures the input is not null or whitespace.
+    /// </summary>
+    /// <param name="entryName">The input string.</param>
+    /// <returns>A sanitized non-empty string.</returns>
     private static string SanitizeNullOrWhiteSpace(string? entryName)
     {
         while (string.IsNullOrWhiteSpace(entryName))
         {
-            Console.WriteLine("invalid entry please try again or press E to exit");
+            Console.WriteLine("Invalid entry, please try again or press E to exit");
             entryName = Console.ReadLine()?.ToLower();
         }
 
         return entryName;
     }
 
+    /// <summary>
+    /// Determines if the user wants to exit based on the input.
+    /// </summary>
+    /// <param name="entry">The input string.</param>
+    /// <returns><c>true</c> if the user wants to exit, otherwise <c>false</c>.</returns>
     private static bool IsExit(string entry)
     {
         if (entry.ToLower() == "e")

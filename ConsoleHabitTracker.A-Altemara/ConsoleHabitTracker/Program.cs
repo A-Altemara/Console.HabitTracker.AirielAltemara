@@ -1,10 +1,15 @@
-﻿using System.Data.SQLite;
-using System.Diagnostics.Contracts;
+﻿namespace ConsoleHabitTracker;
 
-namespace ConsoleHabitTracker;
-
+/// <summary>
+/// Entry point for the Habit Tracker console application.
+/// Provides a menu-driven interface for managing habit records.
+/// </summary>
 public static class Program
 {
+    /// <summary>
+    /// Main method that starts the application.
+    /// Displays a menu and allows the user to view, add, edit, or delete habit records.
+    /// </summary>
     static void Main()
     {
         var continueProgram = true;
@@ -43,7 +48,7 @@ public static class Program
                     UpdateHabit(habitDb);
                     break;
                 default:
-                    Console.WriteLine("\n\nInvalid Selection press enter to try again");
+                    Console.WriteLine("\n\nInvalid Selection, press enter to try again");
                     Console.ReadLine();
                     break;
             }
@@ -52,15 +57,20 @@ public static class Program
         habitDb.CloseConnection();
     }
 
+    /// <summary>
+    /// Deletes a habit record from the database.
+    /// Prompts the user to select a record to delete.
+    /// </summary>
+    /// <param name="habitDb">The database connection to use.</param>
     private static void DeleteEntry(HabitDb habitDb)
     {
         var habits = ViewRecords(habitDb);
-        var habitId =  Menu.GetValidHabitId(habits);
+        var habitId = Menu.GetValidHabitId(habits);
         if (habitId is null)
         {
             return;
         }
-        
+
         if (habitDb.DeleteHabit(habitId))
         {
             Console.WriteLine("Record deleted successfully, press any key to continue");
@@ -73,6 +83,11 @@ public static class Program
         Console.ReadKey();
     }
 
+    /// <summary>
+    /// Retrieves and displays all habit records from the database.
+    /// </summary>
+    /// <param name="habitDb">The database connection to use.</param>
+    /// <returns>A list of all habit records in the database.</returns>
     private static List<Habit> ViewRecords(HabitDb habitDb)
     {
         var habits = habitDb.GetAllRecords();
@@ -80,6 +95,10 @@ public static class Program
         return habits;
     }
 
+    /// <summary>
+    /// Prompts the user to create a new habit record and adds it to the database.
+    /// </summary>
+    /// <param name="habitDb">The database connection to use.</param>
     private static void NewHabit(HabitDb habitDb)
     {
         var newHabit = Menu.AddNewHabit();
@@ -92,10 +111,15 @@ public static class Program
         Console.ReadLine();
     }
 
+    /// <summary>
+    /// Prompts the user to update an existing habit record in the database.
+    /// Displays the current records and allows the user to select a record to edit.
+    /// </summary>
+    /// <param name="habitDb">The database connection to use.</param>
     private static void UpdateHabit(HabitDb habitDb)
     {
         var habits = ViewRecords(habitDb);
-        var habitIdString =  Menu.GetValidHabitId(habits);
+        var habitIdString = Menu.GetValidHabitId(habits);
         if (habitIdString is null)
         {
             return;
@@ -108,7 +132,7 @@ public static class Program
         {
             return;
         }
-        
+
         var success = habitDb.UpdateHabit(updatedHabit);
         if (success)
         {
@@ -120,7 +144,5 @@ public static class Program
             Console.WriteLine("Unable to update record, press enter to continue");
             Console.ReadLine();
         }
-        
     }
-    
 }
