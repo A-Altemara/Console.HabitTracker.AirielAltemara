@@ -53,8 +53,6 @@ public static class Program
                     break;
             }
         }
-
-        habitDb.CloseConnection();
     }
 
     /// <summary>
